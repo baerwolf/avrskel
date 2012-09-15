@@ -5,6 +5,10 @@
   #error You have to define the new startposition within the flash
 #endif
 
+#if ((FLASHADDRESS % 2) == 1)
+  #error executable code only can be located on even addresses
+#endif
+
 #ifndef FLASHPREAMBLE
  #define FLASHPREAMBLE FLASHADDRESS
 #endif
