@@ -86,6 +86,8 @@ main.hex: main.elf
 	$(AVRDUDE) -D -U flash:w:main.hex:i
 	$(ECHO) "."
 
+disasm: main.elf
+	$(OBD) -d main.elf
 
 trampoline: flashheadertool
 flashheader: flashheadertool
