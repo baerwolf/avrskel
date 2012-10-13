@@ -26,6 +26,8 @@ GCC=gcc
 MAKE=@make
 RM=@rm -f
 
+AS=$(AVRPATH)avr-as
+LD=$(AVRPATH)avr-ld
 CC=$(AVRPATH)avr-gcc
 OBC=@$(AVRPATH)avr-objcopy
 OBD=@$(AVRPATH)avr-objdump
@@ -34,8 +36,8 @@ SIZ=@$(AVRPATH)avr-size
 AVRDUDE = $(ECHO) CALL: avrdude $(PROGRAMMER) -p $(DEVICE)
 
 
-MYCFLAGS = -Wall -Os -fno-move-loop-invariants -fno-tree-scev-cprop -fno-inline-small-functions -I. -mmcu=$(DEVICE) -DF_CPU=$(F_CPU) $(CFLAGS)   $(DEFINES)
-MYLDFLAGS = -Wl,--relax,--gc-sections $(LDFLAGS)
+MYCFLAGS = -I. -mmcu=$(DEVICE)  $(CFLAGS)   $(DEFINES)
+MYLDFLAGS = $(LDFLAGS)
 
 
 FLASHPREAMBLEDEFINE = 
@@ -51,7 +53,7 @@ ifneq ($(FLASHADDRESS), 0x0000)
 ifneq ($(FLASHADDRESS), 0x00000)
 FLASHPREAMBLE = 0x0000
 FLASHPREAMBLEDEFINE = -DFLASHPREAMBLE=$(FLASHPREAMBLE)
-MYLDFLAGS += -Wl,--section-start=.text=$(FLASHADDRESS)
+MYLDFLAGS += --section-start=.text=$(FLASHADDRESS)
 endif
 endif
 endif
@@ -69,42 +71,24 @@ endif
 
 
 
-all:  main.hex
+all:  main.elf
 
-
-main.o: main.c
-	$(CC) main.c -c -o main.o $(MYCFLAGS)
-
-main.elf: main.o
-	$(CC) main.o -o main.elf $(MYCFLAGS) $(MYLDFLAGS)
-
-main.hex: main.elf
+main.elf: main.S
+	$(AS) $(MYCFLAGS)   main.S -o main.o
+	$(LD) $(MYLDFLAGS)  main.o -o main.elf
 	$(OBC) -j .text -j .data -O ihex main.elf main.hex
-	$(ECHO) "."
-	$(SIZ) main.elf
-	$(ECHO) "."
-	$(AVRDUDE) -D -U flash:w:main.hex:i
-	$(ECHO) "."
+	$(OBC) -j .text -j .data -O binary main.elf main.raw
+
 
 disasm: main.elf
 	$(OBD) -d main.elf
-
-trampoline: flashheadertool
-flashheader: flashheadertool
-
-flashheadertool: createredirectorflashheader.c
-	$(GCC) -O0 -ggdb -g3 -o flashheadertool createredirectorflashheader.c -DFLASHADDRESS=$(FLASHADDRESS) $(FLASHPREAMBLEDEFINE)
-	./flashheadertool > flashheader.bin
-	$(ECHO) "."
-	$(AVRDUDE) -D -U flash:w:flashheader.bin:r
-	$(ECHO) "."
 
 deepclean: clean
 	$(RM) *~
 
 clean:
 	$(RM) *.o
+	$(RM) main.out
+	$(RM) main.raw
 	$(RM) main.hex
 	$(RM) main.elf
-	$(RM) flashheader.bin
-	$(RM) flashheadertool
