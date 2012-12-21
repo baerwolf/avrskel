@@ -69,42 +69,47 @@ endif
 
 
 
-all:  main.hex
+all:  main.hex main.raw main.asm
 
+hd44780.o: libs/hd44780.c libs/hd44780.h
+	$(CC) libs/hd44780.c -c -o hd44780.o $(MYCFLAGS)
+
+lcd.o: libs/lcd.c libs/lcd.h
+	$(CC) libs/lcd.c -c -o lcd.o $(MYCFLAGS)
 
 main.o: main.c
 	$(CC) main.c -c -o main.o $(MYCFLAGS)
 
-main.elf: main.o
-	$(CC) main.o -o main.elf $(MYCFLAGS) $(MYLDFLAGS)
-
-main.hex: main.elf
-	$(OBC) -j .text -j .data -O ihex main.elf main.hex
+main.elf: main.o lcd.o hd44780.o
+	$(CC) main.o lcd.o hd44780.o -o main.elf $(MYCFLAGS) $(MYLDFLAGS)
 	$(ECHO) "."
 	$(SIZ) main.elf
 	$(ECHO) "."
-	$(AVRDUDE) -D -U flash:w:main.hex:i
-	$(ECHO) "."
+
+main.hex: main.elf
+	$(OBC) -j .text -j .data -O ihex main.elf main.hex
+
+main.raw: main.elf
+	$(OBC) -j .text -j .data -O binary main.elf main.raw
+
+main.asm: main.elf
+	$(OBD) -d main.elf > main.asm
 
 disasm: main.elf
 	$(OBD) -d main.elf
 
-trampoline: flashheadertool
-flashheader: flashheadertool
-
-flashheadertool: createredirectorflashheader.c
-	$(GCC) -O0 -ggdb -g3 -o flashheadertool createredirectorflashheader.c -DFLASHADDRESS=$(FLASHADDRESS) $(FLASHPREAMBLEDEFINE)
-	./flashheadertool > flashheader.bin
+flash: main.hex
 	$(ECHO) "."
-	$(AVRDUDE) -D -U flash:w:flashheader.bin:r
+	$(AVRDUDE) -D -U flash:w:main.hex:i
 	$(ECHO) "."
 
 deepclean: clean
+	$(RM) libs/*~
 	$(RM) *~
 
 clean:
 	$(RM) *.o
 	$(RM) main.hex
+	$(RM) main.raw
+	$(RM) main.asm
 	$(RM) main.elf
-	$(RM) flashheader.bin
-	$(RM) flashheadertool
