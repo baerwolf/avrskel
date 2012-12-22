@@ -81,7 +81,7 @@ main.o: main.c
 	$(CC) main.c -c -o main.o $(MYCFLAGS)
 
 main.elf: main.o lcd.o hd44780.o
-	$(CC) main.o lcd.o hd44780.o -o main.elf $(MYCFLAGS) $(MYLDFLAGS)
+	$(CC) main.o lcd.o hd44780.o -o main.elf $(MYCFLAGS) -Wl,-Map,main.map $(MYLDFLAGS)
 	$(ECHO) "."
 	$(SIZ) main.elf
 	$(ECHO) "."
@@ -112,4 +112,5 @@ clean:
 	$(RM) main.hex
 	$(RM) main.raw
 	$(RM) main.asm
+	$(RM) main.map
 	$(RM) main.elf
